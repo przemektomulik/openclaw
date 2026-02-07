@@ -1,15 +1,16 @@
 {
   "agents": {
     "defaults": {
-      "workspace": "/root/clawd"
+      "workspace": "/root/clawd",
+      "model": {
+        "primary": "anthropic/claude-opus-4-5"
+      }
     }
   },
   "gateway": {
     "port": 18789,
     "mode": "local"
-  }
-}
-{
+  },
   "channels": {
     "whatsapp": {
       "dmPolicy": "allowlist",
