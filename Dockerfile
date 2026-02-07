@@ -1,44 +1,51 @@
 FROM docker.io/cloudflare/sandbox:0.7.0
 
-# Install Node.js 22 (required by clawdbot) and rsync (for R2 backup sync)
-# The base image has Node 20, we need to replace it with Node 22
-# Using direct binary download for reliability
+# Install Chromium and dependencies for WhatsApp channel
+RUN apt-get update && apt-get install -y \
+    xz-utils \
+    ca-certificates \
+    rsync \
+    dumb-init \
+    chromium \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22
 ENV NODE_VERSION=22.13.1
-RUN apt-get update && apt-get install -y xz-utils ca-certificates rsync \
-    && curl -fsSLk https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz \
+RUN curl -fsSLk https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz \
     && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
-    && rm /tmp/node.tar.xz \
-    && node --version \
-    && npm --version
+    && rm /tmp/node.tar.xz
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Install moltbot
+RUN npm install -g clawdbot@2026.1.24-3
 
-# Install moltbot (CLI is still named clawdbot until upstream renames)
-# Pin to specific version for reproducible builds
-RUN npm install -g clawdbot@2026.1.24-3 \
-    && clawdbot --version
-
-# Create moltbot directories (paths still use clawdbot until upstream renames)
-# Templates are stored in /root/.clawdbot-templates for initialization
-RUN mkdir -p /root/.clawdbot \
-    && mkdir -p /root/.clawdbot-templates \
-    && mkdir -p /root/clawd \
-    && mkdir -p /root/clawd/skills
+# Setup directories
+RUN mkdir -p /root/.clawdbot /root/.clawdbot-templates /root/clawd/skills
 
 # Copy startup script
-# Build cache bust: 2026-02-07-v1-whatsapp-channel
+# Build cache bust: 2026-02-07-v2-chromium
 COPY start-moltbot.sh /usr/local/bin/start-moltbot.sh
 RUN chmod +x /usr/local/bin/start-moltbot.sh
 
-# Copy default configuration template
 COPY moltbot.json.template /root/.clawdbot-templates/moltbot.json.template
-
-# Copy custom skills
 COPY skills/ /root/clawd/skills/
 
-# Set working directory
 WORKDIR /root/clawd
 
-# Expose the gateway port
-EXPOSE 18789
+# Use dumb-init to prevent zombie processes (the 180 process issue)
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/usr/local/bin/start-moltbot.sh"]

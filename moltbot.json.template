@@ -14,7 +14,15 @@
   "channels": {
     "whatsapp": {
       "dmPolicy": "allowlist",
-      "allowFrom": ["+48783745974"]
+      "allowFrom": ["+48783745974"],
+      "puppeteer": {
+        "executablePath": "/usr/bin/chromium",
+        "args": [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage"
+        ]
+      }
     }
   }
 }

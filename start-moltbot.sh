@@ -8,12 +8,12 @@
 
 set -e
 
-# Check if clawdbot gateway is already running - bail early if so
-# Note: CLI is still named "clawdbot" until upstream renames it
-if pgrep -f "clawdbot gateway" > /dev/null 2>&1; then
-    echo "Moltbot gateway is already running, exiting."
-    exit 0
-fi
+# Cleanup any stale processes from previous crashed runs to prevent process explosion
+# (the 182 processes issue). This is safer than bailing early.
+echo "Initializing environment..."
+pkill -f "clawdbot gateway" || true
+pkill -f "chromium" || true
+sleep 2
 
 # Paths (clawdbot paths are used internally - upstream hasn't renamed yet)
 CONFIG_DIR="/root/.clawdbot"
