@@ -8,11 +8,14 @@
 
 set -e
 
-# Cleanup any stale processes from previous crashed runs to prevent process explosion
-# (the 182 processes issue). This is safer than bailing early.
-echo "Initializing environment..."
-pkill -f "clawdbot gateway" || true
-pkill -f "chromium" || true
+# System-wide cleanup to prevent process leaks (the "266 process" issue)
+echo "Initializing environment (cleaning stale processes)..."
+pkill -9 -f "clawdbot gateway" || true
+pkill -9 -f "chrome" || true
+pkill -9 -f "chromium" || true
+# Clean up any zombie processes
+ps -ef | grep defunct | grep -v grep | awk '{print $2}' | xargs kill -9 2>/dev/null || true
+rm -rf /tmp/puppeteer_dev_profile* /tmp/core.* 2>/dev/null || true
 sleep 2
 
 # Paths (clawdbot paths are used internally - upstream hasn't renamed yet)
@@ -265,10 +268,33 @@ if (isOpenAI) {
     config.agents.defaults.model.primary = 'anthropic/claude-opus-4-5';
 }
 
+// Force WhatsApp config to ensure latest scavenger/puppeteer settings are applied
+console.log('Enforcing WhatsApp configuration...');
+config.channels.whatsapp = {
+    enabled: true,
+    dmPolicy: 'allowlist',
+    allowFrom: ["+48783745974"],
+    puppeteer: {
+        executablePath: '/usr/bin/google-chrome-stable',
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage', 
+            '--disable-gpu',
+            '--single-process'
+        ]
+    }
+};
+
 // Write updated config
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 console.log('Configuration updated successfully');
-console.log('Config:', JSON.stringify(config, null, 2));
+// Log a sanitized version of the config for the logs
+const logConfig = JSON.parse(JSON.stringify(config));
+if (logConfig.gateway?.auth?.token) logConfig.gateway.auth.token = '***';
+if (logConfig.channels?.telegram?.botToken) logConfig.channels.telegram.botToken = '***';
+if (logConfig.channels?.discord?.token) logConfig.channels.discord.token = '***';
+console.log('Config updated with WhatsApp settings.');
 EOFNODE
 
 # ============================================================
