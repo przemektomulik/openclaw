@@ -9,3 +9,11 @@
     "mode": "local"
   }
 }
+{
+  "channels": {
+    "whatsapp": {
+      "dmPolicy": "allowlist",
+      "allowFrom": ["+48783745974"]
+    }
+  }
+}
